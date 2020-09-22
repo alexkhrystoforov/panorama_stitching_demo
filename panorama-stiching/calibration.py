@@ -53,7 +53,8 @@ def get_matrix(folder_name, patternSize):
 
 
 def undistort(folder_name, images_number):
-    mtx, dist = get_matrix(folder_name='datasets_for_calibrating/chessboard19x14', patternSize=(19, 14))
+    mtx, dist = get_matrix(folder_name='datasets_for_calibrating/chessboard9x6', patternSize=(9, 6))
+    # mtx, dist = get_matrix(folder_name='datasets_for_calibrating/chessboard19x14', patternSize=(19, 14))
 
     images = [cv2.imread(folder_name + f'/frame{i}.jpeg') for i in range(images_number)]
     im_num = 0
@@ -75,11 +76,11 @@ def undistort(folder_name, images_number):
         cv2.namedWindow('undistortion', cv2.WINDOW_NORMAL)
         cv2.imshow('undistortion', stack)
 
-        if not os.path.exists(folder_name + '_with_undistortion/'):
-            os.mkdir(folder_name + '_with_undistortion/')
+        if not os.path.exists(folder_name + '_with_undistortion9x6/'):
+            os.mkdir(folder_name + '_with_undistortion9x6/')
             print('folder is created')
 
-        cv2.imwrite(f'{folder_name}_with_undistortion/frame{im_num}.jpeg', dst)
+        cv2.imwrite(f'{folder_name}_with_undistortion9x6/frame{im_num}.jpeg', dst)
 
         im_num += 1
         # mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, newcameramtx, (w, h), 5)
