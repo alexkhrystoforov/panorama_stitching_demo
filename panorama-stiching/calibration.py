@@ -1,35 +1,106 @@
 import cv2
 import numpy as np
+import glob
+import os
 
 
-# termination criteria
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+def get_matrix(folder_name, patternSize):
+    # termination criteria
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
-objp = np.zeros((6*7,3), np.float32)
-objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
+    # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+    # вместо этих координат задать размеры
 
-# Arrays to store object points and image points from all the images.
-objpoints = [] # 3d point in real world space
-imgpoints = [] # 2d points in image plane.
+    objp = np.zeros((patternSize[1] * patternSize[0], 3), np.float32)
+    objp[:, :2] = np.mgrid[0:patternSize[0], 0:patternSize[1]].T.reshape(-1, 2)
+
+    # Arrays to store object points and image points from all the images.
+    objpoints = []  # 3d point in real world space
+    imgpoints = []  # 2d points in image plane.
+
+    images = glob.glob(folder_name + '/*.jpeg')
+
+    binary = None
+
+    for fname in images:
+        img = cv2.imread(fname)
+
+        _, thr = cv2.threshold(img, 160, 255, cv2.THRESH_BINARY)
+        binary = cv2.cvtColor(thr, cv2.COLOR_RGB2GRAY)
+        binary = cv2.erode(binary, kernel=np.ones((3, 3), np.uint8))
+
+        # Find the chess board corners
+        ret, corners = cv2.findChessboardCorners(binary, patternSize, None)
+
+        if ret:
+            objpoints.append(objp)
+
+            corners2 = cv2.cornerSubPix(binary, corners, (11, 11), (-1, -1), criteria)
+            imgpoints.append(corners2)
+
+            # Draw and display the corners
+            # img = cv2.drawChessboardCorners(img, patternSize, corners2, ret)
+            # cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+            # cv2.imshow('img',img)
+            # cv2.waitKey(0)
+
+    cv2.destroyAllWindows()
+
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, binary.shape[::-1], None, None)
+    # print(mtx)
+
+    return mtx, dist
 
 
-img = cv2.imread('chessboard/chessboard.jpg')
-gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+def undistort(folder_name, images_number):
+    mtx, dist = get_matrix(folder_name='datasets_for_calibrating/chessboard19x14', patternSize=(19, 14))
 
-# Find the chess board corners
-ret, corners = cv2.findChessboardCorners(gray, (7,6),None)
+    images = [cv2.imread(folder_name + f'/frame{i}.jpeg') for i in range(images_number)]
+    im_num = 0
 
-# If found, add object points, image points (after refining them)
-if ret == True:
-    objpoints.append(objp)
+    for img in images:
+        h, w = img.shape[:2]
+        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
-    corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
-    imgpoints.append(corners2)
+        dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
 
-    # Draw and display the corners
-    img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)
-    cv2.imshow('img',img)
-    cv2.waitKey(0)
+        # print(dst.shape)
+        # print(img.shape)
+        # x, y, w, h = roi
+        # dst = dst[y:y + h, x:x + w]
+        # dim = (913, 627)
+        # img = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
 
-cv2.destroyAllWindows()
+        stack = np.concatenate((img, dst), axis=0)
+        cv2.namedWindow('undistortion', cv2.WINDOW_NORMAL)
+        cv2.imshow('undistortion', stack)
+
+        if not os.path.exists(folder_name + '_with_undistortion/'):
+            os.mkdir(folder_name + '_with_undistortion/')
+            print('folder is created')
+
+        cv2.imwrite(f'{folder_name}_with_undistortion/frame{im_num}.jpeg', dst)
+
+        im_num += 1
+        # mapx, mapy = cv2.initUndistortRectifyMap(mtx, dist, None, newcameramtx, (w, h), 5)
+        # dst = cv2.remap(img, mapx, mapy, cv2.INTER_LINEAR)
+        #
+        # stack = np.concatenate((img, dst), axis=0)
+        #
+        # cv2.namedWindow('undistort using remapping', cv2.WINDOW_NORMAL)
+        # cv2.imshow('undistort using remapping', stack)
+
+        cv2.waitKey(0)
+
+
+# IMPORTANT! Different calibrating sets give us a little bit different matricies
+
+# get_matrix(folder_name='datasets_for_calibrating/chessboard19x14', patternSize=(19, 14))
+# get_matrix(folder_name='datasets_for_calibrating/chessboard9x6', patternSize=(9, 6))
+
+
+if __name__ == '__main__':
+    undistort(folder_name='datasets/view', images_number=6)
+    undistort(folder_name='datasets/building', images_number=4)
+    undistort(folder_name='datasets/room', images_number=4)
+    undistort(folder_name='datasets/road', images_number=4)
