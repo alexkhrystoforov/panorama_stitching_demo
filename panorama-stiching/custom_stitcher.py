@@ -60,11 +60,11 @@ def stitch(images):
         sz_out = (max(max_extent[1], images[0].shape[1]), max(max_extent[0], images[0].shape[0]))
 
         warp = cv2.warpPerspective(images[1], M, dsize=sz_out)
-        print('warp', warp.shape)
+        # print('warp', warp.shape)
 
         result = warp.copy()
         result[0:images[0].shape[0], 0:images[0].shape[1]] = images[0]
-        print('result shape', result.shape)
+        # print('result shape', result.shape)
         # cv2.namedWindow('result', cv2.WINDOW_NORMAL)
         # cv2.imshow('result', result)
         # cv2.waitKey(0)
@@ -72,9 +72,9 @@ def stitch(images):
         return result
 
 
-def stitching_demo(folder_name, images_number, calibrating_set, mode=None):
+def stitching_demo(folder_name, images_number, calibrating_set=None, undistortion=False):
 
-    if mode == 'undirstortion':
+    if undistortion:
 
         imgs = [cv2.imread(folder_name + f'/frame{i}.jpeg') for i in range(images_number)]
         img_with_undistortion = [cv2.imread(folder_name + f'_with_undistortion{calibrating_set}/frame{i}.jpeg') for i in range(images_number)]
@@ -104,26 +104,34 @@ def stitching_demo(folder_name, images_number, calibrating_set, mode=None):
         res2 = stitch(imgs[1:3])
         res3 = stitch(imgs[2:4])
 
-        if not os.path.exists('my_stitcher_results/' + folder_name[9:] + f'_result{calibrating_set}/'):
-            os.mkdir('my_stitcher_results/' + folder_name[9:] + f'_result{calibrating_set}/')
+        if not os.path.exists('my_stitcher_results/' + folder_name[9:] + f'_result/'):
+            os.mkdir('my_stitcher_results/' + folder_name[9:] + f'_result/')
             print('folder is created')
 
         if images_number == 6:
 
             res4 = stitch([imgs[3], imgs[4]])
             res5 = stitch([imgs[4], imgs[5]])
-            cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result{calibrating_set}/frame{4}.png', res4)
-            cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result{calibrating_set}/frame{5}.png', res5)
+            cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result/frame{4}.png', res4)
+            cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result/frame{5}.png', res5)
 
-        cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result{calibrating_set}/frame{1}.png', res1)
-        cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result{calibrating_set}/frame{2}.png', res2)
-        cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result{calibrating_set}/frame{3}.png', res3)
+        cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result/frame{1}.png', res1)
+        cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result/frame{2}.png', res2)
+        cv2.imwrite(f'my_stitcher_results/{folder_name[9:]}_result/frame{3}.png', res3)
 
 
 if __name__ == '__main__':
-    # stitching_demo('datasets/view', images_number=6)
-    # stitching_demo('datasets/view', images_number=6, mode='undirstortion')
-    # stitching_demo('datasets/building', images_number=4)
-    # stitching_demo('datasets/road', images_number=4, calibrating_set='9x6', mode='undirstortion')
-    stitching_demo('datasets/room', images_number=4, calibrating_set='9x6', mode='undirstortion')
-    stitching_demo('datasets/room', images_number=4, calibrating_set='19x14', mode='undirstortion')
+    stitching_demo('datasets/view', images_number=6)
+    stitching_demo('datasets/road', images_number=4)
+    stitching_demo('datasets/room', images_number=4)
+    stitching_demo('datasets/building', images_number=4)
+
+    stitching_demo('datasets/view', images_number=6, calibrating_set='19x14', undistortion=True)
+    stitching_demo('datasets/road', images_number=4, calibrating_set='19x14', undistortion=True)
+    stitching_demo('datasets/room', images_number=4, calibrating_set='19x14', undistortion=True)
+    stitching_demo('datasets/building', images_number=4, calibrating_set='19x14', undistortion=True)
+
+    stitching_demo('datasets/road', images_number=4, calibrating_set='9x6', undistortion=True)
+    stitching_demo('datasets/room', images_number=4, calibrating_set='9x6', undistortion=True)
+    stitching_demo('datasets/building', images_number=4, calibrating_set='9x6', undistortion=True)
+    stitching_demo('datasets/view', images_number=6, calibrating_set='9x6', undistortion=True)
